@@ -29,17 +29,143 @@ Windows 系统会生成 `goss.exe`，Linux/macOS 会生成 `goss` 可执行文�
 
 将编译好的可执行文件添加到系统 PATH 中，这样就可以在任何地方使用 `goss` 命令。
 
-**Windows:**
+#### Windows 配置方法
+
+**方法 1：复制到系统目录（推荐）**
+
+1. 找到编译好的 `goss.exe` 文件位置（通常在项目根目录）
+
+2. 选择一个系统 PATH 目录，常用的有：
+   - `C:\Windows\System32` （需要管理员权限）
+   - `C:\Program Files\GoSSH` （推荐，创建新目录）
+
+3. 复制文件：
+   ```powershell
+   # 如果选择创建新目录
+   New-Item -ItemType Directory -Path "C:\Program Files\GoSSH" -Force
+   Copy-Item goss.exe "C:\Program Files\GoSSH\"
+   ```
+
+4. 添加到 PATH 环境变量：
+   - 按 `Win + X`，选择"系统"
+   - 点击"高级系统设置"
+   - 点击"环境变量"
+   - 在"系统变量"中找到 `Path`，点击"编辑"
+   - 点击"新建"，输入 `C:\Program Files\GoSSH`
+   - 点击"确定"保存
+
+5. 验证配置：
+   ```powershell
+   # 打开新的 PowerShell 窗口
+   goss --help
+   ```
+
+**方法 2：添加项目目录到 PATH（适合开发）**
+
+如果想让项目目录中的 `goss.exe` 全局可用：
+
+1. 找到项目目录的完整路径，例如：`D:\Dev\Self\goSSH`
+
+2. 添加到 PATH 环境变量：
+   - 按 `Win + X`，选择"系统"
+   - 点击"高级系统设置"
+   - 点击"环境变量"
+   - 在"用户变量"或"系统变量"中找到 `Path`，点击"编辑"
+   - 点击"新建"，输入项目目录路径 `D:\Dev\Self\goSSH`
+   - 点击"确定"保存
+
+3. 重新打开 PowerShell 窗口验证：
+   ```powershell
+   goss --help
+   ```
+
+**方法 3：使用 PowerShell 快速配置（推荐）**
+
+运行以下 PowerShell 脚本（需要管理员权限）：
+
 ```powershell
-# 将 goss.exe 移动到系统 PATH 中的某个目录
-# 或创建一个符号链接
+# 以管理员身份运行 PowerShell
+
+# 1. 创建程序目录
+$targetDir = "C:\Program Files\GoSSH"
+New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+
+# 2. 复制文件（替换为你的实际路径）
+$sourcePath = "D:\Dev\Self\goSSH\goss.exe"
+Copy-Item $sourcePath "$targetDir\goss.exe" -Force
+
+# 3. 添加到 PATH（用户级别）
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($currentPath -notlike "*$targetDir*") {
+    [Environment]::SetEnvironmentVariable("Path", "$currentPath;$targetDir", "User")
+    Write-Host "✓ 已添加到用户 PATH" -ForegroundColor Green
+} else {
+    Write-Host "✓ 已在 PATH 中" -ForegroundColor Yellow
+}
+
+# 4. 刷新当前会话的 PATH
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+# 5. 验证
+Write-Host "`n验证安装..." -ForegroundColor Cyan
+goss --help
 ```
 
-**Linux/macOS:**
+**方法 4：创建符号链接（不占用额外空间）**
+
+```powershell
+# 以管理员身份运行 PowerShell
+
+# 1. 创建目标目录
+$targetDir = "C:\Program Files\GoSSH"
+New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+
+# 2. 创建符号链接（替换为你的实际路径）
+$sourcePath = "D:\Dev\Self\goSSH\goss.exe"
+New-Item -ItemType SymbolicLink -Path "$targetDir\goss.exe" -Target $sourcePath
+
+# 3. 添加到 PATH（同方法3的步骤3-5）
+```
+
+**验证配置是否成功：**
+
+1. 打开**新的** PowerShell 或 CMD 窗口（重要：必须重新打开）
+2. 运行：
+   ```powershell
+   goss --help
+   ```
+3. 如果显示帮助信息，说明配置成功！
+4. 如果在任何目录下都能运行 `goss`，说明 PATH 配置正确
+
+**故障排除：**
+
+- **提示"找不到命令"**：
+  - 确认已重新打开 PowerShell/CMD 窗口
+  - 检查 PATH 环境变量中是否包含目录路径
+  - 确认 `goss.exe` 文件存在于该目录
+  - 运行 `$env:Path -split ';'` 查看当前 PATH
+
+- **权限不足**：
+  - 以管理员身份运行 PowerShell
+  - 或使用"用户变量"而不是"系统变量"
+
+- **刷新环境变量**：
+  ```powershell
+  # 刷新当前会话的 PATH
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+  ```
+
+#### Linux/macOS 配置方法
+
 ```bash
-sudo mv goss /usr/local/bin/
-# 或者
+# 复制到系统目录
 sudo cp goss /usr/local/bin/
+
+# 或者创建符号链接
+sudo ln -s $(pwd)/goss /usr/local/bin/goss
+
+# 验证
+goss --help
 ```
 
 ## 🚀 快速开始
