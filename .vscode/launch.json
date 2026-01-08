@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch GoSSH",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "env": {},
+            "args": [],
+            "showLog": true
+        },
+        {
+            "name": "Launch GoSSH (Interactive Mode)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "env": {},
+            "args": ["interactive"],
+            "showLog": true
+        },
+        {
+            "name": "Launch GoSSH (Connect)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "env": {},
+            "args": ["connect", "server1"],
+            "showLog": true
+        },
+        {
+            "name": "Launch GoSSH (Exec)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "env": {},
+            "args": ["exec", "server1", "ls -la"],
+            "showLog": true
+        }
+    ]
+}
