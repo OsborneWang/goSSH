@@ -135,7 +135,8 @@ func handleConnect(manager *config.Manager) {
 	fmt.Printf("✓ 已连接到 %s\n\n", server.Name)
 
 	executor := ssh.NewExecutor(client)
-	if err := executor.ExecuteShell(); err != nil {
+	// 在交互式模式下，也优先尝试在新标签页中打开
+	if err := executor.ExecuteShell(true); err != nil {
 		fmt.Printf("Shell错误: %v\n", err)
 	}
 }

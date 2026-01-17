@@ -12,6 +12,28 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// crlfFilterReader 过滤掉Windows终端发送的\r字符，只保留\n
+// 这样可以避免在SSH会话中出现双重回车的问题
+type crlfFilterReader struct {
+	reader io.Reader
+}
+
+func (r *crlfFilterReader) Read(p []byte) (n int, err error) {
+	n, err = r.reader.Read(p)
+	if n > 0 {
+		// 过滤掉\r字符
+		writeIdx := 0
+		for i := 0; i < n; i++ {
+			if p[i] != '\r' {
+				p[writeIdx] = p[i]
+				writeIdx++
+			}
+		}
+		n = writeIdx
+	}
+	return n, err
+}
+
 // Executor 提供远程命令执行功能
 type Executor struct {
 	client *Client
@@ -59,13 +81,15 @@ func (e *Executor) ExecuteInteractive(command string) error {
 	defer session.Close()
 
 	// 设置标准输入输出
+	// 在Windows上，使用crlfFilterReader过滤掉\r字符，避免双重回车问题
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
+	session.Stdin = &crlfFilterReader{reader: os.Stdin}
 
 	// 设置伪终端（PTY）用于交互式命令
+	// ECHO 设置为 0，禁用远程回显，由本地终端负责回显，避免命令重复显示
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          1,     // 启用回显
+		ssh.ECHO:          0,     // 禁用远程回显，避免命令重复显示
 		ssh.TTY_OP_ISPEED: 14400, // 输入速度
 		ssh.TTY_OP_OSPEED: 14400, // 输出速度
 	}
@@ -150,7 +174,62 @@ func (e *Executor) ExecuteWithStream(command string) error {
 }
 
 // ExecuteShell 启动交互式Shell
-func (e *Executor) ExecuteShell() error {
+// 如果 useNewTab 为 false，则优先尝试在新标签页中启动，失败后尝试新窗口，最后回退到当前终端
+func (e *Executor) ExecuteShell(useNewTab bool) error {
+	// 如果不需要新标签页，直接在当前终端执行
+	if !useNewTab {
+		return e.executeShellInCurrentTerminal()
+	}
+
+	// 优先尝试新标签页
+	if err := e.ExecuteShellInNewTab(); err == nil {
+		return nil
+	}
+
+	// 如果新标签页失败，尝试新窗口
+	if err := e.ExecuteShellInNewWindow(); err == nil {
+		return nil
+	}
+
+	// 如果都失败，回退到当前终端
+	return e.executeShellInCurrentTerminal()
+}
+
+// ExecuteShellInNewTab 在新标签页中启动交互式Shell
+func (e *Executor) ExecuteShellInNewTab() error {
+	// 获取服务器名称
+	serverName := e.client.GetServer().Name
+
+	// 获取可执行文件路径
+	execPath, err := GetExecutablePath()
+	if err != nil {
+		return err
+	}
+
+	// 构建命令：goss connect servername --no-new-tab
+	// --no-new-tab 标志确保在新标签页中不会再尝试打开新标签页
+	cmdArgs := []string{"connect", serverName, "--no-new-tab"}
+
+	// 在新标签页中执行命令
+	return OpenInNewTab(execPath, cmdArgs...)
+}
+
+// ExecuteShellInNewWindow 在新窗口中启动交互式Shell
+func (e *Executor) ExecuteShellInNewWindow() error {
+	serverName := e.client.GetServer().Name
+
+	execPath, err := GetExecutablePath()
+	if err != nil {
+		return err
+	}
+
+	cmdArgs := []string{"connect", serverName, "--no-new-tab"}
+
+	return OpenInNewWindow(execPath, cmdArgs...)
+}
+
+// executeShellInCurrentTerminal 在当前终端中启动交互式Shell（原有逻辑）
+func (e *Executor) executeShellInCurrentTerminal() error {
 	if !e.client.IsConnected() {
 		if err := e.client.Connect(); err != nil {
 			return err
@@ -164,13 +243,15 @@ func (e *Executor) ExecuteShell() error {
 	defer session.Close()
 
 	// 设置标准输入输出
+	// 在Windows上，使用crlfFilterReader过滤掉\r字符，避免双重回车问题
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
+	session.Stdin = &crlfFilterReader{reader: os.Stdin}
 
 	// 设置伪终端
+	// ECHO 设置为 0，禁用远程回显，由本地终端负责回显，避免命令重复显示
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          1,
+		ssh.ECHO:          0,     // 禁用远程回显，避免命令重复显示
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}

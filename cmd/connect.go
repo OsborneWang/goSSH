@@ -10,6 +10,10 @@ import (
 	"goSSH/internal/ssh"
 )
 
+var (
+	noNewTab bool // --no-new-tab 标志，避免在新标签页中递归打开新标签页
+)
+
 var connectCmd = &cobra.Command{
 	Use:   "connect [name]",
 	Short: "连接到SSH服务器",
@@ -78,8 +82,9 @@ var connectCmd = &cobra.Command{
 		fmt.Printf("✓ 已连接到 %s\n\n", server.Name)
 
 		// 启动交互式Shell
+		// 如果设置了 --no-new-tab 标志，则直接在当前终端执行，不尝试新标签页
 		executor := ssh.NewExecutor(client)
-		if err := executor.ExecuteShell(); err != nil {
+		if err := executor.ExecuteShell(!noNewTab); err != nil {
 			fmt.Fprintf(os.Stderr, "Shell错误: %v\n", err)
 			os.Exit(1)
 		}
@@ -87,6 +92,7 @@ var connectCmd = &cobra.Command{
 }
 
 func init() {
+	connectCmd.Flags().BoolVar(&noNewTab, "no-new-tab", false, "在当前终端中执行，不尝试在新标签页中打开（避免递归）")
 	rootCmd.AddCommand(connectCmd)
 }
 

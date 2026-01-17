@@ -6,6 +6,7 @@ GoSSH 是一个使用 Go 语言开发的跨平台 SSH 命令行工具，支持 W
 
 - 🔐 **服务器管理** - 添加、删除、列出服务器配置
 - 🖥️ **SSH 连接** - 支持交互式 Shell 连接
+- 🆕 **智能终端** - 自动检测终端类型，优先在新标签页中打开 SSH 会话（支持 Windows Terminal、iTerm2、Terminal.app、GNOME Terminal、Konsole 等）
 - ⚡ **命令执行** - 在远程服务器上执行命令并实时查看输出
 - 📁 **文件传输** - 支持 SFTP 上传/下载文件和目录
 - 🎯 **交互式模式** - 友好的交互式菜单界面
@@ -303,6 +304,13 @@ goss remove server1
 
 连接到 SSH 服务器并启动交互式 Shell。如果不提供名称，会进入交互式选择。
 
+默认情况下，工具会尝试在当前终端应用的新标签页中打开 SSH 会话，如果不支持新标签页，会自动回退到新窗口或当前终端。
+
+**支持的终端（新标签页功能）：**
+- **Windows:** Windows Terminal、Tabby（回退到新窗口）
+- **macOS:** iTerm2、Terminal.app
+- **Linux:** GNOME Terminal、Konsole、XFCE Terminal、Alacritty 等
+
 **使用示例：**
 ```bash
 # 交互式选择
@@ -310,7 +318,13 @@ goss connect
 
 # 直接指定名称
 goss connect server1
+
+# 在当前终端执行，不尝试新标签页（避免递归）
+goss connect server1 --no-new-tab
 ```
+
+**标志说明：**
+- `--no-new-tab`: 在当前终端中直接执行，不尝试在新标签页或新窗口中打开。当工具在新标签页中运行时，会自动使用此标志以避免递归。
 
 连接成功后，您将进入远程服务器的 Shell，可以执行各种命令。输入 `exit` 或按 `Ctrl+D` 退出。
 
@@ -482,6 +496,13 @@ goss exec server3 "sudo apt update"
    - Windows 和 Unix 系统在路径分隔符上有差异，工具会自动处理
    - 终端大小检测在不同系统上可能略有差异
 
+5. **终端新标签页功能：**
+   - 工具会自动检测当前使用的终端应用，并优先尝试在新标签页中打开 SSH 会话
+   - 如果终端不支持新标签页（或检测失败），会自动回退到新窗口或当前终端
+   - 在没有桌面环境的 Linux 系统中（如 SSH 会话中），会自动回退到当前终端执行
+   - Tabby 终端可能不支持外部控制新标签页，会自动回退到新窗口方式
+   - 使用 `--no-new-tab` 标志可以强制在当前终端执行
+
 ## 🐛 故障排除
 
 ### 连接失败
@@ -502,6 +523,14 @@ goss exec server3 "sudo apt update"
 - 检查命令语法是否正确
 - 确认用户在远程服务器上有执行权限
 - 查看错误信息获取更多细节
+
+### 新标签页功能不工作
+
+- 确认您的终端应用支持新标签页功能（Windows Terminal、iTerm2、Terminal.app、GNOME Terminal、Konsole 等）
+- 检查终端是否正确安装并在 PATH 中（Windows Terminal 的 `wt.exe`、macOS 的 `osascript`、Linux 的 `gnome-terminal` 或 `konsole`）
+- 如果检测失败，工具会自动回退到新窗口或当前终端，这属于正常行为
+- 在无桌面环境的系统（如通过 SSH 连接的远程服务器）中，新标签页功能不可用，会自动回退
+- 使用 `--no-new-tab` 标志可以在当前终端直接执行
 
 ## 📄 许可证
 

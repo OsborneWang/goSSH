@@ -60,6 +60,11 @@ func (c *Client) IsConnected() bool {
 	return c.conn != nil
 }
 
+// GetServer 获取服务器配置
+func (c *Client) GetServer() *models.Server {
+	return c.server
+}
+
 // Reconnect 重连SSH服务器
 func (c *Client) Reconnect() error {
 	if c.conn != nil {
